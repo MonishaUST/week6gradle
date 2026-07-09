@@ -44,7 +44,7 @@ bin/
 
 .idea/
 **/.idea/
-#*.jar
+*.jar
 #**/*.jar
 *.log
 .env
