@@ -94,7 +94,7 @@ public class OrderTest {
         assertEquals(1, repo.countShipped());
     }
     @Test
-    void findsOrderBySku() {
+    void findsOrderBySkufail() {
 
         factory.persisted(
                 OrderBuilder.anOrder()
