@@ -1,96 +1,86 @@
-#name: Order Repository CI
-#
-#on:
-#  push:
-#    branches:
-#      - main
-#  pull_request:
-#
-#jobs:
-#  order-test:
-#
-#    runs-on: ubuntu-latest
-#
-#    services:
-#      postgres:
-#        image: postgres:16
-#
-#        env:
-#          POSTGRES_DB: testdb
-#          POSTGRES_USER: postgres
-#          POSTGRES_PASSWORD: postgres
-#
-#        ports:
-#          - 5432:5432
-#
-#        options: >-
-#          --health-cmd="pg_isready -U postgres"
-#          --health-interval=10s
-#          --health-timeout=5s
-#          --health-retries=5
-#
-#    steps:
-#
-#      - name: Checkout Repository
-#        uses: actions/checkout@v4
-#
-#      - name: Setup Java
-#        uses: actions/setup-java@v4
-#        with:
-#          distribution: temurin
-#          java-version: 22
-#
-#      - name: Setup Gradle
-#        uses: gradle/actions/setup-gradle@v4
-#
-#      - name: Make Gradle Wrapper Executable
-##        working-directory: Gradle_Project
-#        run: chmod +x gradlew
-#
-#      - name: Run Order Test
-##        working-directory: Gradle_Project
-#        run: ./gradlew orderTest
-#        env:
-#          JAVA_TOOL_OPTIONS: >
-#            -Ddb.url=jdbc:postgresql://localhost:5432/testdb
-#            -Ddb.user=postgres
-#            -Ddb.password=postgres
-
-
-name: Java CI
+name: Order Repository CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches:
+      - main
   pull_request:
-    branches: [ main, master ]
+
+permissions:
+  contents: write
 
 jobs:
-  build:
+  order-test:
 
     runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v4
+    services:
+      postgres:
+        image: postgres:16
 
-      - name: Set up JDK 21
+        env:
+          POSTGRES_DB: testdb
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+
+        ports:
+          - 5432:5432
+
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: 22
 
-      # Installs Gradle 8.10.2 on the runner and puts `gradle` on PATH,
-      # so the build does NOT need the committed gradle-wrapper.jar.
-      # (Zscaler blocks committing/uploading .jar files, so the wrapper
-      #  jar is missing from the repo; using an installed Gradle avoids it.)
-      - name: Set up Gradle
+      - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.10.2'
 
-      # Runs compile for the whole project, but only the Testcontainers +
-      # plain unit tests (org.testcontainers.sdet.*). The Selenium/Cucumber UI
-      # tests (org.selenium.sdet.*) need a running web app + browser, so they
-      # are excluded from CI. Run the full suite locally with `gradle test`.
-      - name: Run tests
-        run: gradle clean test --tests "org.testcontainers.sdet.*" --stacktrace
+      - name: Make Gradle Wrapper Executable
+        working-directory: Gradle_Project
+        run: chmod +x gradlew
+
+      - name: Run Order Test
+        working-directory: Gradle_Project
+        run: ./gradlew orderTest --no-configuration-cache
+        env:
+          JAVA_TOOL_OPTIONS: >
+            -Ddb.url=jdbc:postgresql://localhost:5432/testdb
+            -Ddb.user=postgres
+            -Ddb.password=postgres
+
+      - name: Checkout gh-pages branch
+        if: always()
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - name: Generate Allure Report
+        if: always()
+        uses: simple-elf/allure-report-action@master
+        with:
+          allure_results: Gradle_Project/build/allure-results
+          allure_report: allure-report
+          gh_pages: gh-pages
+          allure_history: allure-history
+
+      - name: Deploy report to GitHub Pages
+        if: always()
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: allure-history
