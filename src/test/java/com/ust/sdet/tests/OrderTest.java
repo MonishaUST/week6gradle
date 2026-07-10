@@ -93,4 +93,18 @@ public class OrderTest {
         assertEquals(2, repo.count());
         assertEquals(1, repo.countShipped());
     }
+    @Test
+    void findsOrderBySku() {
+
+        factory.persisted(
+                OrderBuilder.anOrder()
+                        .withSku("SKU-100")
+                        .build()
+        );
+
+        Order order = repo.findBySku("SKU-10");
+
+        assertEquals("SKU-100", order.sku());
+        assertEquals(1, order.qty());
+    }
 }
